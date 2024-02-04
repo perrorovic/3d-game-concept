@@ -3,11 +3,16 @@ extends CharacterBody3D
 var speed: float = 5.0
 var speed_sprint: float = 7.0
 const speed_default: float = 5.0
-const jump_velocity: float = 4.5
+const jump_velocity: float = 5.0 # Default value is 4.5
+
+var player_ableToWallJump: bool
+const jump_modifierWallJump:= 2
+var player_ableToDoubleJump: bool
+const jump_modifierDoubleJump:= -1
 
 # Get the gravity from the project settings to be synced with RigidBody nodes.
-# Changed gravity from 9.8 to 10.2 instead
 var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
+var added_mass: float = 6.2
 
 @onready var camera := $CameraPivot/Camera3D
 @onready var pivot := $CameraPivot
@@ -28,18 +33,17 @@ func _physics_process(delta):
 	var input_direction = Input.get_vector("mv_left", "mv_right", "mv_foward", "mv_backward")
 	player_gravity(delta)
 	player_movement(input_direction)
+	player_cameraTilt()
 	player_actionSprint(input_direction)
 	move_and_slide()
 	player_quit()
 
 func player_gravity(delta):
 	if not is_on_floor():
-		velocity.y -= gravity * delta
+		velocity.y -= (gravity + added_mass) * delta
 
 func player_movement(input_direction: Vector2):
-	# Jump
-	if Input.is_action_just_pressed("ui_accept") and is_on_floor():
-		velocity.y = jump_velocity
+	player_jump()
 	# WASD Movement
 	var direction = (transform.basis * Vector3(input_direction.x, 0, input_direction.y)).normalized()
 	if direction:
@@ -48,6 +52,38 @@ func player_movement(input_direction: Vector2):
 	else:
 		velocity.x = move_toward(velocity.x, 0, speed)
 		velocity.z = move_toward(velocity.z, 0, speed)
+
+func player_jump():
+	# Jump priority (if all condition are met): Default -> Wall-jump -> Double-jump
+	# Default-jump
+	if Input.is_action_just_pressed("ui_accept") and is_on_floor():
+		# Bunny hopping with holding space with Input.is_action_pressed()
+		# The default is Input.is_action_just_pressed()
+		print('Default-jump')
+		velocity.y = jump_velocity
+	# Wall-jump
+	elif Input.is_action_just_pressed("ui_accept") and is_on_wall_only() and player_ableToWallJump:
+		player_ableToWallJump = false
+		print('Wall-jump')
+		velocity.y = jump_velocity + jump_modifierWallJump
+	# Double-jump
+	elif Input.is_action_just_pressed("ui_accept") and not is_on_floor() and player_ableToDoubleJump:
+		player_ableToDoubleJump = false
+		print('Double-jump')
+		velocity.y = jump_velocity + jump_modifierDoubleJump
+	# Being on floor reset everything
+	if is_on_floor():
+		player_ableToDoubleJump = true
+		player_ableToWallJump = true
+
+func player_cameraTilt():
+	# Camera tilt to right is negative and left is positive
+	if Input.is_action_just_released("mv_left") or Input.is_action_just_released("mv_right"):
+		camera_tiltTween()
+	if Input.is_action_pressed("mv_left") and Input.is_action_pressed("mv_shift"):
+		camera_tiltTween(0.025) # Default value is 0.015
+	if Input.is_action_pressed("mv_right") and Input.is_action_pressed("mv_shift"):
+		camera_tiltTween(-0.025) # Default value is -0.015
 
 func player_actionSprint(input_direction: Vector2):
 	if input_direction != Vector2.ZERO and Input.is_action_pressed("mv_shift"):
@@ -68,6 +104,10 @@ func player_audioSfxStep(input_direction: Vector2, audio_interval: float = 0.5, 
 			SfxStepPicker.pitch_scale = randf_range(0.8, 1.2)
 			SfxStepPicker.play()
 			$Timer/SfxStepCooldown.start(audio_interval)
+
+func camera_tiltTween(tilt_degree: float = 0):
+	var cameraTween = get_tree().create_tween()
+	cameraTween.tween_property(camera, "rotation", Vector3(0, 0, tilt_degree), 0.25)
 
 func camera_fovTween(fov: int):
 	var cameraTween = get_tree().create_tween()

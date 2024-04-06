@@ -16,17 +16,42 @@ var added_mass: float = 6.2
 
 @onready var camera := $CameraPivot/Camera3D
 @onready var pivot := $CameraPivot
-@onready var sens: float = Settings.mouse_sensitivity
+@onready var JOY_CAMERA_X: float
+@onready var JOY_CAMERA_Y: float
+
+@onready var mouse_sens: float = Settings.mouse_sensitivity
+@onready var joy_deadzone: float = Settings.joystick_deadzone
+@onready var joy_h_sens: float = Settings.joystick_h_sensitivity
+@onready var joy_v_sens: float = Settings.joystick_v_sensitivity
 
 func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	
+# First person camera for controller
+func _input(event: InputEvent):
+	if event is InputEventJoypadMotion:
+		if event.get_axis() == JOY_AXIS_RIGHT_Y:
+			if abs(event.get_axis_value()) > joy_deadzone:
+				JOY_CAMERA_X = -(event.get_axis_value() * 0.0005 * joy_h_sens)
+			else:
+				JOY_CAMERA_X = 0
+		elif event.get_axis() == JOY_AXIS_RIGHT_X:
+			if abs(event.get_axis_value()) > joy_deadzone:
+				JOY_CAMERA_Y = -(event.get_axis_value() * 0.0005 * joy_v_sens)
+			else:
+				JOY_CAMERA_Y = 0
+# Process for controller camera view
+func _process(_delta):
+		rotate_y(rad_to_deg(JOY_CAMERA_Y))
+		pivot.rotation.x += rad_to_deg(JOY_CAMERA_X)
+		pivot.rotation.x = clamp(pivot.rotation.x,deg_to_rad(-50),deg_to_rad(60))
 
-# First person camera
+# First person camera for mouse
 func _unhandled_input(event: InputEvent):
 	if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 		if event is InputEventMouseMotion:
-			rotate_y(rad_to_deg(-event.relative.x * 0.00005 * sens))
-			pivot.rotate_x(rad_to_deg(-event.relative.y * 0.00005 * sens))
+			rotate_y(rad_to_deg(-event.relative.x * 0.00005 * mouse_sens))
+			pivot.rotate_x(rad_to_deg(-event.relative.y * 0.00005 * mouse_sens))
 			pivot.rotation.x = clamp(pivot.rotation.x, deg_to_rad(-50), deg_to_rad(60))
 
 func _physics_process(delta):
@@ -114,5 +139,5 @@ func camera_fovTween(fov: int):
 	cameraTween.tween_property(camera, "fov", fov, 0.25)
 
 func player_quit():
-	if Input.is_action_just_pressed("ui_cancel"):
+	if Input.is_action_just_pressed("quit"):
 		get_tree().quit()

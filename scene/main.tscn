@@ -149,6 +149,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -9.60709, -0.00278157, 0)
 script = null
 
+[node name="Enemy3" parent="." instance=ExtResource("1_cyuep")]
+transform = Transform3D(0.501903, 0, -0.864924, 0, 1, 0, 0.864924, 0, 0.501903, -9.60709, -0.00278157, 3.70159)
+script = null
+
 [node name="Enemy2" parent="." instance=ExtResource("1_cyuep")]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, -1.8555, -0.00278157, -14.1114)
 script = null

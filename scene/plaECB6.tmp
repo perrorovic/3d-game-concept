@@ -1,0 +1,73 @@
+[gd_scene load_steps=13 format=3 uid="uid://c1wq6mjjnbjmn"]
+
+[ext_resource type="Script" path="res://scene/player.gd" id="1_uvf5x"]
+[ext_resource type="AudioStream" uid="uid://bf1dkvsl4erox" path="res://sound/step/step1.mp3" id="2_dmjk5"]
+[ext_resource type="AudioStream" uid="uid://bms1sh2hy5fv5" path="res://sound/step/step2.mp3" id="3_sjfq8"]
+[ext_resource type="AudioStream" uid="uid://trfs15p5rk84" path="res://sound/step/step3.mp3" id="4_xmx34"]
+[ext_resource type="AudioStream" uid="uid://b4xa50c6nia6i" path="res://sound/step/step4.mp3" id="5_no1wm"]
+[ext_resource type="AudioStream" uid="uid://c8b156sntqm13" path="res://sound/step/step5.mp3" id="6_a1njp"]
+[ext_resource type="AudioStream" uid="uid://dafug36s2x83b" path="res://sound/step/step6.mp3" id="7_iil83"]
+[ext_resource type="AudioStream" uid="uid://r2ml2h5oei6" path="res://sound/step/step8.mp3" id="9_r72bf"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_s5dws"]
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_gp1ch"]
+points = PackedVector3Array(-0.125207, -0.532801, -0.480507, 0.0227831, 0.47607, 0.498884, 0.169713, 0.559144, 0.464172, 0.231051, -0.803591, 0.320455, 0.40741, 0.651043, -0.243523, -0.482789, 0.594843, 0.0822132, -0.362868, -0.682312, 0.289697, 0.469044, -0.654529, -0.0662713, -0.127444, 0.842701, -0.338103, -0.393435, -0.683942, -0.244717, 0.438255, 0.623309, 0.200849, 0.0841477, 0.977454, 0.114795, -0.0682023, -0.976458, -0.12927, 0.20055, -0.563129, -0.451454, -0.185527, 0.595453, -0.453475, -0.273363, 0.592268, 0.407754, -0.00693649, -0.476823, 0.49966, 0.375821, -0.588614, 0.316955, 0.111579, 0.563059, -0.481177, -0.41725, 0.527866, -0.270497, -0.484546, -0.596972, -0.0665097, -0.279747, 0.908561, 0.0533361, -0.250197, -0.880712, 0.205319, 0.263647, -0.902771, -0.127394, 0.293368, 0.871526, -0.157196, 0.373412, -0.526319, -0.328246, 0.499663, 0.476641, -0.00688856, 0.0531056, 0.875001, 0.324703, -0.154543, -0.590854, 0.465879, -0.0972799, -0.782358, -0.398188, -0.387649, -0.498171, 0.31565, -0.30068, -0.587995, -0.388901)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_74x3d"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_jk43p"]
+
+[node name="CharacterBody3D" type="CharacterBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.00278157, 0)
+script = ExtResource("1_uvf5x")
+
+[node name="SfxStep" type="Node" parent="."]
+
+[node name="Step1" type="AudioStreamPlayer" parent="SfxStep"]
+stream = ExtResource("2_dmjk5")
+
+[node name="Step2" type="AudioStreamPlayer" parent="SfxStep"]
+stream = ExtResource("3_sjfq8")
+
+[node name="Step3" type="AudioStreamPlayer" parent="SfxStep"]
+stream = ExtResource("4_xmx34")
+
+[node name="Step4" type="AudioStreamPlayer" parent="SfxStep"]
+stream = ExtResource("5_no1wm")
+
+[node name="Step5" type="AudioStreamPlayer" parent="SfxStep"]
+stream = ExtResource("6_a1njp")
+
+[node name="Step6" type="AudioStreamPlayer" parent="SfxStep"]
+stream = ExtResource("7_iil83")
+
+[node name="Step8" type="AudioStreamPlayer" parent="SfxStep"]
+stream = ExtResource("9_r72bf")
+
+[node name="Timer" type="Node" parent="."]
+
+[node name="SfxStepCooldown" type="Timer" parent="Timer"]
+one_shot = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.01855, 0)
+mesh = SubResource("CapsuleMesh_s5dws")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.01855, 0)
+shape = SubResource("ConvexPolygonShape3D_gp1ch")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.681463, 0, 0, 0, 0.213468, 0, 0, 0, 0.60815, 0, 1.44556, -0.298635)
+mesh = SubResource("CapsuleMesh_74x3d")
+
+[node name="TargetArea" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.00278157, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="TargetArea"]
+transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, 0, 1.01533, 0)
+shape = SubResource("SphereShape3D_jk43p")
+
+[connection signal="body_entered" from="TargetArea" to="." method="_on_target_area_body_entered"]
+[connection signal="body_exited" from="TargetArea" to="." method="_on_target_area_body_exited"]

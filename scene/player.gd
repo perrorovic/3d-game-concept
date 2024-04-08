@@ -26,6 +26,9 @@ var added_mass: float = 6.2
 
 var player_targetLocked: bool = false
 var player_targetAvailable: bool
+# var player_targetList: CharacterBody3D 
+# Make this as array with body ref which can be targeted? and remove those if cannot be targeted?
+var player_targetList: Array = []
 var player_targetActive: CharacterBody3D
 
 func _ready():
@@ -154,33 +157,53 @@ func player_targetLock():
 		player_targetLocked = true
 		# Disable camera input from both mouse and controller
 		set_process_unhandled_input(false)
-		print("Target locked into ", player_targetActive)
+		player_targetActive = player_targetList[0]
+		print("Target locked from ", player_targetActive)
 	elif Input.is_action_just_pressed("target_lock") and player_targetLocked:
 		# Targeting released manually
 		player_targetLocked = false
 		# Enable camera input from both mouse and controller
 		set_process_unhandled_input(true)
-		print("Target unlocked into ", player_targetActive)
+		print("Target unlocked from ", player_targetActive)
+		player_targetActive = null
+	
+	# BUG Need to check for the distance of the enemies for example:
+	# There is two enemy in list. [1] is closer to the player than [0]
+	# Therefore it SHOULD target [1] the closer one, but for now it target [0] which entered the area first.
 	
 	if player_targetLocked:
+		if Input.is_action_just_pressed("target_change") and player_targetList.size() > 1:
+			print("Target is more than 1 and now changing target!")
+			# I dont know how to do this part, how to make a loopback arrays?
+			# player_targetActive = player_targetList[(player_targetList.find(player_targetActive)+1)]
+			# I mean this does work... but it does looks stupid
+			player_targetList.pop_front()
+			player_targetList.append(player_targetActive)
+			player_targetActive = player_targetList[0]
+			# TEST The fact that D-pad left and right didnt see the enemy position whatsoever
+			# And also mwheel-up/down both use 1 spin sensitivity which make the change really sensitive...
 		# This is currently static, should be property of [body] from target area radius
+		# look_at(player_targetList.position)
 		look_at(player_targetActive.position)
 
 func _on_target_area_body_entered(body):
 	# This check for all bodies including those which static? 
 	# Adding filter changer into param [body: filter] does work but the debugger didn't like it...
 	# Def need filter but idc for now
-	if body.name == 'Enemy' or body.name == 'Enemy2':
-		print("Target entered ", body)
+	if body.name == 'Enemy' or body.name == 'Enemy2' or body.name == 'Enemy3':
 		player_targetAvailable = true
-		# Set target var referrence, does this need to be cleaned up everytime?
-		player_targetActive = body
+		# Add target into the list if there is any
+		player_targetList.append(body)
+		print(player_targetList.size(), " Enemy target in vicinity")
 
 func _on_target_area_body_exited(body):
-	if body.name == 'Enemy' or body.name == 'Enemy2':
-		print("Target exited ", body)
-		player_targetAvailable = false
-		# Break targeting if enemy are out of area radius
-		player_targetLocked = false
-		set_process_unhandled_input(true)
-		print("Target lost")
+	if body.name == 'Enemy' or body.name == 'Enemy2' or body.name == 'Enemy3':
+		player_targetList.erase(body)
+		print(player_targetList.size(), " Enemy target in vicinity")
+		# What if there is mutiple target side by side?
+		# Check which target is leaving? is it the one player currently targeting?
+		# If yes then break the targeting because enemy are out of area radius
+		if player_targetActive == body:
+			player_targetLocked = false
+			player_targetAvailable = false
+			set_process_unhandled_input(true)

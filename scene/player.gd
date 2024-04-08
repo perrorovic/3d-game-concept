@@ -24,11 +24,33 @@ var added_mass: float = 6.2
 @onready var joy_h_sens: float = Settings.joystick_h_sensitivity
 @onready var joy_v_sens: float = Settings.joystick_v_sensitivity
 
+var player_targetLocked: bool = false
+var player_targetAvailable: bool
+var player_targetActive: CharacterBody3D
+
 func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	
-# First person camera for controller
-func _input(event: InputEvent):
+func _process(_delta):
+	player_cameraTilt()
+	controller_cameraView()
+	player_targetLock()
+	
+func _physics_process(delta):
+	var input_direction = Input.get_vector("mv_left", "mv_right", "mv_foward", "mv_backward")
+	player_gravity(delta)
+	player_movement(input_direction)
+	player_actionSprint(input_direction)
+	move_and_slide()
+	player_quit()
+
+# First person camera for mouse and controller
+func _unhandled_input(event: InputEvent):
+	if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+		if event is InputEventMouseMotion:
+			rotate_y(rad_to_deg(-event.relative.x * 0.00005 * mouse_sens))
+			pivot.rotate_x(rad_to_deg(-event.relative.y * 0.00005 * mouse_sens))
+			pivot.rotation.x = clamp(pivot.rotation.x, deg_to_rad(-50), deg_to_rad(60))
 	if event is InputEventJoypadMotion:
 		if event.get_axis() == JOY_AXIS_RIGHT_Y:
 			if abs(event.get_axis_value()) > joy_deadzone:
@@ -40,28 +62,12 @@ func _input(event: InputEvent):
 				JOY_CAMERA_Y = -(event.get_axis_value() * 0.0005 * joy_v_sens)
 			else:
 				JOY_CAMERA_Y = 0
+
 # Process for controller camera view
-func _process(_delta):
-		rotate_y(rad_to_deg(JOY_CAMERA_Y))
-		pivot.rotation.x += rad_to_deg(JOY_CAMERA_X)
-		pivot.rotation.x = clamp(pivot.rotation.x,deg_to_rad(-50),deg_to_rad(60))
-
-# First person camera for mouse
-func _unhandled_input(event: InputEvent):
-	if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-		if event is InputEventMouseMotion:
-			rotate_y(rad_to_deg(-event.relative.x * 0.00005 * mouse_sens))
-			pivot.rotate_x(rad_to_deg(-event.relative.y * 0.00005 * mouse_sens))
-			pivot.rotation.x = clamp(pivot.rotation.x, deg_to_rad(-50), deg_to_rad(60))
-
-func _physics_process(delta):
-	var input_direction = Input.get_vector("mv_left", "mv_right", "mv_foward", "mv_backward")
-	player_gravity(delta)
-	player_movement(input_direction)
-	player_cameraTilt()
-	player_actionSprint(input_direction)
-	move_and_slide()
-	player_quit()
+func controller_cameraView():
+	rotate_y(rad_to_deg(JOY_CAMERA_Y))
+	pivot.rotation.x += rad_to_deg(JOY_CAMERA_X)
+	pivot.rotation.x = clamp(pivot.rotation.x,deg_to_rad(-50),deg_to_rad(60))
 
 func player_gravity(delta):
 	if not is_on_floor():
@@ -84,17 +90,17 @@ func player_jump():
 	if Input.is_action_just_pressed("ui_accept") and is_on_floor():
 		# Bunny hopping with holding space with Input.is_action_pressed()
 		# The default is Input.is_action_just_pressed()
-		print('Default-jump')
+		#print('Default-jump')
 		velocity.y = jump_velocity
 	# Wall-jump
 	elif Input.is_action_just_pressed("ui_accept") and is_on_wall_only() and player_ableToWallJump:
 		player_ableToWallJump = false
-		print('Wall-jump')
+		#print('Wall-jump')
 		velocity.y = jump_velocity + jump_modifierWallJump
 	# Double-jump
 	elif Input.is_action_just_pressed("ui_accept") and not is_on_floor() and player_ableToDoubleJump:
 		player_ableToDoubleJump = false
-		print('Double-jump')
+		#print('Double-jump')
 		velocity.y = jump_velocity + jump_modifierDoubleJump
 	# Being on floor reset everything
 	if is_on_floor():
@@ -141,3 +147,40 @@ func camera_fovTween(fov: int):
 func player_quit():
 	if Input.is_action_just_pressed("quit"):
 		get_tree().quit()
+
+func player_targetLock():
+	if Input.is_action_just_pressed("target_lock") and !player_targetLocked and player_targetAvailable:
+		# Targeting enable when enemy are in target radius
+		player_targetLocked = true
+		# Disable camera input from both mouse and controller
+		set_process_unhandled_input(false)
+		print("Target locked into ", player_targetActive)
+	elif Input.is_action_just_pressed("target_lock") and player_targetLocked:
+		# Targeting released manually
+		player_targetLocked = false
+		# Enable camera input from both mouse and controller
+		set_process_unhandled_input(true)
+		print("Target unlocked into ", player_targetActive)
+	
+	if player_targetLocked:
+		# This is currently static, should be property of [body] from target area radius
+		look_at(player_targetActive.position)
+
+func _on_target_area_body_entered(body):
+	# This check for all bodies including those which static? 
+	# Adding filter changer into param [body: filter] does work but the debugger didn't like it...
+	# Def need filter but idc for now
+	if body.name == 'Enemy' or body.name == 'Enemy2':
+		print("Target entered ", body)
+		player_targetAvailable = true
+		# Set target var referrence, does this need to be cleaned up everytime?
+		player_targetActive = body
+
+func _on_target_area_body_exited(body):
+	if body.name == 'Enemy' or body.name == 'Enemy2':
+		print("Target exited ", body)
+		player_targetAvailable = false
+		# Break targeting if enemy are out of area radius
+		player_targetLocked = false
+		set_process_unhandled_input(true)
+		print("Target lost")

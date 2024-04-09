@@ -157,8 +157,17 @@ func player_targetLock():
 		player_targetLocked = true
 		# Disable camera input from both mouse and controller
 		set_process_unhandled_input(false)
-		player_targetActive = player_targetList[0]
-		print("Target locked from ", player_targetActive)
+		# This loops the player_targetList[] and search for the nearest target to the player
+		# Maybe make this a standalone function? maybe it will be used for other things in the future...
+		var nearestDistance = INF
+		for player_target in player_targetList:
+			var distanceSquared = position.distance_squared_to(player_target.position)
+			if distanceSquared < nearestDistance:
+				nearestDistance = distanceSquared
+				player_targetActive = player_target
+		print("Target locked to ", player_targetActive, " with ", position.distance_squared_to(player_targetActive.position), " distance")
+		# This check the distance between the player position and the enemy pos stored in player_targetActive
+		# This could be use before everything else to check the nearest enemy and lock into it!
 	elif Input.is_action_just_pressed("target_lock") and player_targetLocked:
 		# Targeting released manually
 		player_targetLocked = false
@@ -167,29 +176,25 @@ func player_targetLock():
 		print("Target unlocked from ", player_targetActive)
 		player_targetActive = null
 	
-	# BUG Need to check for the distance of the enemies for example:
-	# There is two enemy in list. [1] is closer to the player than [0]
-	# Therefore it SHOULD target [1] the closer one, but for now it target [0] which entered the area first.
-	
 	if player_targetLocked:
 		if Input.is_action_just_pressed("target_change") and player_targetList.size() > 1:
-			print("Target is more than 1 and now changing target!")
 			# I dont know how to do this part, how to make a loopback arrays?
 			# player_targetActive = player_targetList[(player_targetList.find(player_targetActive)+1)]
 			# I mean this does work... but it does looks stupid
-			player_targetList.pop_front()
+			# FIXED - ref the main target and remove it form the arrays and send it back
+			player_targetList.remove_at(player_targetList.find(player_targetActive))
 			player_targetList.append(player_targetActive)
+			print("Changing target from ", player_targetActive," to ", player_targetList[0])
 			player_targetActive = player_targetList[0]
 			# TEST The fact that D-pad left and right didnt see the enemy position whatsoever
 			# And also mwheel-up/down both use 1 spin sensitivity which make the change really sensitive...
 		# This is currently static, should be property of [body] from target area radius
-		# look_at(player_targetList.position)
 		look_at(player_targetActive.position)
 
 func _on_target_area_body_entered(body):
 	# This check for all bodies including those which static? 
 	# Adding filter changer into param [body: filter] does work but the debugger didn't like it...
-	# Def need filter but idc for now
+	# The filtering is on collision layer and mask
 	if body.name == 'Enemy' or body.name == 'Enemy2' or body.name == 'Enemy3':
 		player_targetAvailable = true
 		# Add target into the list if there is any

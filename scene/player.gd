@@ -26,19 +26,17 @@ var added_mass: float = 6.2
 
 var player_targetLocked: bool = false
 var player_targetAvailable: bool
-# var player_targetList: CharacterBody3D 
-# Make this as array with body ref which can be targeted? and remove those if cannot be targeted?
 var player_targetList: Array = []
 var player_targetActive: CharacterBody3D
 
 func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-	
-func _process(_delta):
+
+func _process(delta):
 	player_cameraTilt()
 	controller_cameraView()
-	player_targetLock()
-	
+	player_targetLock(delta)
+
 func _physics_process(delta):
 	var input_direction = Input.get_vector("mv_left", "mv_right", "mv_foward", "mv_backward")
 	player_gravity(delta)
@@ -151,7 +149,7 @@ func player_quit():
 	if Input.is_action_just_pressed("quit"):
 		get_tree().quit()
 
-func player_targetLock():
+func player_targetLock(delta):
 	if Input.is_action_just_pressed("target_lock") and !player_targetLocked and player_targetAvailable:
 		# Targeting enable when enemy are in target radius
 		player_targetLocked = true
@@ -165,7 +163,7 @@ func player_targetLock():
 			if distanceSquared < nearestDistance:
 				nearestDistance = distanceSquared
 				player_targetActive = player_target
-		print("Target locked to ", player_targetActive, " with ", position.distance_squared_to(player_targetActive.position), " distance")
+				print("Target locked to ", player_targetActive, " with ", position.distance_squared_to(player_targetActive.position), " distance")
 		# This check the distance between the player position and the enemy pos stored in player_targetActive
 		# This could be use before everything else to check the nearest enemy and lock into it!
 	elif Input.is_action_just_pressed("target_lock") and player_targetLocked:
@@ -177,19 +175,26 @@ func player_targetLock():
 		player_targetActive = null
 	
 	if player_targetLocked:
-		if Input.is_action_just_pressed("target_change") and player_targetList.size() > 1:
-			# I dont know how to do this part, how to make a loopback arrays?
-			# player_targetActive = player_targetList[(player_targetList.find(player_targetActive)+1)]
-			# I mean this does work... but it does looks stupid
-			# FIXED - ref the main target and remove it form the arrays and send it back
+		# There is 2 key for gamepad that is joypad_tc+ and joypad_tc- because for some reason it can not have both axis+ and axis- in the same input name action, it will read the top most keys
+		# TEST mwheel-up/down both use 1 spin sensitivity which make the change really sensitive, need to tune it down
+		if (Input.is_action_just_pressed("target_change") or Input.is_action_just_pressed("joypad_tc+") or Input.is_action_just_pressed("joypad_tc-")) and player_targetList.size() > 1:
+			# Ref the main target and remove it form the arrays and send it back
 			player_targetList.remove_at(player_targetList.find(player_targetActive))
 			player_targetList.append(player_targetActive)
 			print("Changing target from ", player_targetActive," to ", player_targetList[0])
 			player_targetActive = player_targetList[0]
-			# TEST The fact that D-pad left and right didnt see the enemy position whatsoever
-			# And also mwheel-up/down both use 1 spin sensitivity which make the change really sensitive...
-		# This is currently static, should be property of [body] from target area radius
-		look_at(player_targetActive.position)
+		# Advance version of look_at(player_targetActive) which smoothen the camera view
+		var target_direction = (player_targetActive.position - global_transform.origin).normalized()
+		var target_rotation = Basis.looking_at(target_direction, Vector3(0, 1, 0))
+		var player_cameraLockTarget = global_transform.basis.slerp(target_rotation, delta * 5)
+		# BUG debugger about orthonormalized is required or something...
+		# This BUG is recreatable if you do 180deg spin to lock-on to enemies
+		#E 0:00:11:0362 player.gd:191 @ player_targetLock(): Basis must be normalized in order to be casted to a Quaternion. Use get_rotation_quaternion() or call orthonormalized() if the Basis contains linearly independent vectors.
+		#<C++ Error>    Condition "!is_rotation()" is true. Returning: Quaternion()
+		#<C++ Source>   core/math/basis.cpp:710 @ get_quaternion()
+		#<Stack Trace>  player.gd:191 @ player_targetLock()
+		#               player.gd:40 @ _process()
+		global_transform.basis = player_cameraLockTarget
 
 func _on_target_area_body_entered(body):
 	# This check for all bodies including those which static? 

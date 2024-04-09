@@ -141,9 +141,37 @@ shape = SubResource("ConvexPolygonShape3D_djwol")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.00278157, -2.43112)
 
 [node name="CameraPivot" type="Node3D" parent="Player"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3791, 0)
 
 [node name="Camera3D" type="Camera3D" parent="Player/CameraPivot"]
+
+[node name="Control Map" type="TextEdit" parent="Player/CameraPivot/Camera3D"]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -297.0
+offset_top = -142.0
+offset_right = 69.0
+offset_bottom = 29.0
+grow_horizontal = 0
+grow_vertical = 0
+scale = Vector2(0.8, 0.8)
+text = "Move : WASD / Joypad L Stick
+Camera : Mouse / Joypad R Stick
+Run : Shift / RT / R2
+Jump : Space / A / X
+Lock-on : Middle Mouse / RS / R3
+Change Lock-on : Mouse Scroll / Joypad R Stick"
+editable = false
+context_menu_enabled = false
+shortcut_keys_enabled = false
+selecting_enabled = false
+deselect_on_focus_loss_enabled = false
+drag_and_drop_selection_enabled = false
+virtual_keyboard_enabled = false
+middle_mouse_paste_enabled = false
 
 [node name="Enemy" parent="." instance=ExtResource("1_cyuep")]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -9.60709, -0.00278157, 0)

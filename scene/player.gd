@@ -24,6 +24,7 @@ var added_mass: float = 6.2
 @onready var joy_h_sens: float = Settings.joystick_h_sensitivity
 @onready var joy_v_sens: float = Settings.joystick_v_sensitivity
 
+var player_freeView: bool = false
 var player_targetLocked: bool = false
 var player_targetAvailable: bool
 var player_targetList: Array = []
@@ -35,7 +36,7 @@ func _ready():
 func _process(delta):
 	player_cameraTilt()
 	controller_cameraView()
-	player_targetLock(delta)
+	
 
 func _physics_process(delta):
 	var input_direction = Input.get_vector("mv_left", "mv_right", "mv_foward", "mv_backward")
@@ -44,14 +45,29 @@ func _physics_process(delta):
 	player_actionSprint(input_direction)
 	move_and_slide()
 	player_quit()
+	player_targetLock(delta)
 
 # First person camera for mouse and controller
 func _unhandled_input(event: InputEvent):
-	if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+	if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED and player_freeView == false:
 		if event is InputEventMouseMotion:
 			rotate_y(rad_to_deg(-event.relative.x * 0.00005 * mouse_sens))
 			pivot.rotate_x(rad_to_deg(-event.relative.y * 0.00005 * mouse_sens))
 			pivot.rotation.x = clamp(pivot.rotation.x, deg_to_rad(-50), deg_to_rad(60))
+	
+	# Enter free view mode
+	if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED and Input.is_action_pressed("alt"):
+		print("player on free View")
+		player_freeView = true
+		if event is InputEventMouseMotion:
+			camera.rotate_y(rad_to_deg(-event.relative.x * 0.00005 * mouse_sens))
+			camera.rotation_degrees.y = clamp(camera.rotation_degrees.y, -75,75)
+	# Exit free view mode
+	if Input.is_action_just_released("alt"):
+		camera_tiltTween()
+		player_freeView = false
+		print("player exited free View")
+	
 	if event is InputEventJoypadMotion:
 		if event.get_axis() == JOY_AXIS_RIGHT_Y:
 			if abs(event.get_axis_value()) > joy_deadzone:
@@ -110,12 +126,15 @@ func player_jump():
 
 func player_cameraTilt():
 	# Camera tilt to right is negative and left is positive
-	if Input.is_action_just_released("mv_left") or Input.is_action_just_released("mv_right"):
-		camera_tiltTween()
-	if Input.is_action_pressed("mv_left") and Input.is_action_pressed("mv_shift"):
-		camera_tiltTween(0.025) # Default value is 0.015
-	if Input.is_action_pressed("mv_right") and Input.is_action_pressed("mv_shift"):
-		camera_tiltTween(-0.025) # Default value is -0.015
+	
+	# Camera will not tilt on free View -Kepponn 10-04-2024
+	if player_freeView == false:
+		if Input.is_action_just_released("mv_left") or Input.is_action_just_released("mv_right"):
+			camera_tiltTween()
+		if Input.is_action_pressed("mv_left") and Input.is_action_pressed("mv_shift"):
+			camera_tiltTween(0.025) # Default value is 0.015
+		if Input.is_action_pressed("mv_right") and Input.is_action_pressed("mv_shift"):
+			camera_tiltTween(-0.025) # Default value is -0.015
 
 func player_actionSprint(input_direction: Vector2):
 	if input_direction != Vector2.ZERO and Input.is_action_pressed("mv_shift"):
